@@ -103,6 +103,9 @@ impl Block {
     fn get_hash(&self) -> String {
         self.block_header.calculate_hash()
     }
+    fn get_previous_hash(&self) -> &str {
+        &self.block_header.previous_block_hash[..]
+    }
 }
 
 /// ブロックチェーンノード
@@ -130,9 +133,10 @@ impl BlockChainNode {
         let latest_block = self.get_latest_block();
         let next_block = Block::new(
             BlockHeader::new(latest_block.get_index()+1, latest_block.get_hash()),
-            //self.transaction_pool.iter().map(|t| Transaction::new(t.sender, t.recipient, t.amount)).collect()
-            self.transaction_pool.clone()
+            self.transaction_pool.clone(),
         );
+        // トランザクションプールの初期化
+        self.transaction_pool = Vec::new();
 
         self.block_chain.push(next_block.clone());
         //broadcast_block()
@@ -140,5 +144,21 @@ impl BlockChainNode {
     }
     fn get_latest_block(&self) -> &Block {
         self.block_chain.last().unwrap()
+    }
+    ///ブロックの検証
+    fn validate_block(&self, block: &Block) -> bool {
+        let latest_block = self.get_latest_block();
+        if block.get_index() != latest_block.get_index()+1 {
+            return false;
+        } else if block.get_previous_hash() == latest_block.get_hash() {
+            return false;
+        }
+        true
+    }
+    ///ブロックをチェーンに追加
+    fn append_block(&mut self, block: Block) {
+        if self.validate_block(&block) {
+            self.block_chain.push(block);
+        }
     }
 }
